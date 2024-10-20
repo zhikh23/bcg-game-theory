@@ -12,6 +12,7 @@ import (
 const (
 	emptyPythonScriptPath = "../../tests/empty.py"
 	echoPythonScriptPath  = "../../tests/echo.py"
+	helloPythonScriptPath = "../../tests/hello.py"
 )
 
 func TestInvalidActor_FromProgram(t *testing.T) {
@@ -53,4 +54,16 @@ func TestEchoActor_TerminateTwice(t *testing.T) {
 	require.NoError(t, a.Start())
 	require.NoError(t, a.Terminate())
 	require.NoError(t, a.Terminate())
+}
+
+func TestHelloActor_ReadLine(t *testing.T) {
+	a := actor.MustFromProgram(helloPythonScriptPath)
+	require.NoError(t, a.Start())
+	require.True(t, a.Started())
+	line, err := a.ReadLine()
+	require.NoError(t, err)
+	require.Equal(t, "Hello!\n", line)
+	require.Eventually(t, func() bool {
+		return a.Started() == false
+	}, 100*time.Millisecond, 10*time.Millisecond)
 }
