@@ -26,7 +26,7 @@ func TestEmptyActor_Start(t *testing.T) {
 	require.NoError(t, a.Start())
 	// Скрипт пустой и он должен скоро окончить работу.
 	require.Eventually(t, func() bool {
-		return a.Started() == false
+		return a.Running() == false
 	}, 100*time.Millisecond, 10*time.Millisecond)
 }
 
@@ -34,10 +34,10 @@ func TestEchoActor_Start(t *testing.T) {
 	a, err := actor.NewProgramActor(echoPythonScriptPath)
 	require.NoError(t, err)
 	require.NoError(t, a.Start())
-	require.True(t, a.Started())
+	require.True(t, a.Running())
 	require.NoError(t, a.Terminate())
 	require.Eventually(t, func() bool {
-		return a.Started() == false
+		return a.Running() == false
 	}, 100*time.Millisecond, 10*time.Millisecond)
 }
 
@@ -64,7 +64,7 @@ func TestHelloActor_ReadLine(t *testing.T) {
 	require.Equal(t, "Hello!\n", line)
 
 	require.Eventually(t, func() bool {
-		return a.Started() == false
+		return a.Running() == false
 	}, 100*time.Millisecond, 10*time.Millisecond)
 }
 

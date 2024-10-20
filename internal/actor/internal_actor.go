@@ -1,15 +1,19 @@
 package actor
 
+type Handler func(stdin <-chan string, stdout chan<- string)
+
 type InternalActor struct {
-	handler func(string) string
-	out     chan string
+	handler Handler
+	stdin   chan string
+	stdout  chan string
 	run     bool
 }
 
-func NewInternalActor(handler func(string) string) *InternalActor {
+func NewInternalActor(handler Handler) *InternalActor {
 	return &InternalActor{
 		handler: handler,
-		out:     make(chan string, 10),
+		stdin:   make(chan string, 10),
+		stdout:  make(chan string, 10),
 	}
 }
 
@@ -18,10 +22,14 @@ func (a *InternalActor) Start() error {
 		return ErrAlreadyStarted
 	}
 	a.run = true
+	go func() {
+		a.handler(a.stdin, a.stdout)
+		a.run = false
+	}()
 	return nil
 }
 
-func (a *InternalActor) Started() bool {
+func (a *InternalActor) Running() bool {
 	return a.run
 }
 
@@ -32,15 +40,15 @@ func (a *InternalActor) Terminate() error {
 
 func (a *InternalActor) Receive() (string, error) {
 	if !a.run {
-		return "", ErrNotStarted
+		return "", ErrNotRunning
 	}
-	return <-a.out, nil
+	return <-a.stdout, nil
 }
 
 func (a *InternalActor) Send(msg string) error {
 	if !a.run {
-		return ErrNotStarted
+		return ErrNotRunning
 	}
-	a.out <- a.handler(msg)
+	a.stdin <- msg
 	return nil
 }

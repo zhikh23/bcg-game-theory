@@ -64,7 +64,7 @@ func (a *Program) Start() error {
 	return err
 }
 
-func (a *Program) Started() bool {
+func (a *Program) Running() bool {
 	return a.run
 }
 
@@ -73,15 +73,15 @@ func (a *Program) Terminate() error {
 }
 
 func (a *Program) Receive() (string, error) {
-	if !a.Started() {
-		return "", ErrNotStarted
+	if !a.Running() {
+		return "", ErrNotRunning
 	}
 	return a.stdout.ReadString('\n')
 }
 
 func (a *Program) Send(msg string) error {
-	if !a.Started() {
-		return ErrNotStarted
+	if !a.Running() {
+		return ErrNotRunning
 	}
 	_, err := a.stdin.WriteString(msg)
 	if err != nil {
