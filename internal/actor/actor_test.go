@@ -49,8 +49,7 @@ func TestEchoActor_StartTwice(t *testing.T) {
 }
 
 func TestEchoActor_TerminateTwice(t *testing.T) {
-	a, err := actor.FromProgram(echoPythonScriptPath)
-	require.NoError(t, err)
+	a := actor.MustFromProgram(echoPythonScriptPath)
 	require.NoError(t, a.Start())
 	require.NoError(t, a.Terminate())
 	require.NoError(t, a.Terminate())
@@ -59,11 +58,26 @@ func TestEchoActor_TerminateTwice(t *testing.T) {
 func TestHelloActor_ReadLine(t *testing.T) {
 	a := actor.MustFromProgram(helloPythonScriptPath)
 	require.NoError(t, a.Start())
-	require.True(t, a.Started())
+
 	line, err := a.ReadLine()
 	require.NoError(t, err)
 	require.Equal(t, "Hello!\n", line)
+
 	require.Eventually(t, func() bool {
 		return a.Started() == false
 	}, 100*time.Millisecond, 10*time.Millisecond)
+}
+
+func TestEchoActor_Send(t *testing.T) {
+	a := actor.MustFromProgram(echoPythonScriptPath)
+	require.NoError(t, a.Start())
+
+	sent := "Hello!\n"
+	require.NoError(t, a.Send(sent))
+	// Так как программа выполняет функцию эхо, ответ должен быть такой же.
+	res, err := a.ReadLine()
+	require.NoError(t, err)
+	require.Equal(t, sent, res)
+
+	require.NoError(t, a.Terminate())
 }

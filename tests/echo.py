@@ -1,2 +1,4 @@
 #!/usr/bin/python3
-while True: print(input())
+input()
+print("Hello!")
+#while True: print(input())

@@ -3,7 +3,6 @@ package actor
 import (
 	"bufio"
 	"errors"
-	"io"
 	"os/exec"
 )
 
@@ -12,9 +11,9 @@ var ErrAlreadyStarted = errors.New("actor already started")
 
 type Actor struct {
 	cmd    *exec.Cmd
-	stdin  io.Writer
-	stdout io.Reader
-	stderr io.Reader
+	stdin  *bufio.Writer
+	stdout *bufio.Reader
+	stderr *bufio.Reader
 	run    bool
 }
 
@@ -38,9 +37,9 @@ func FromProgram(path string) (*Actor, error) {
 
 	return &Actor{
 		cmd:    cmd,
-		stdin:  stdin,
-		stdout: stdout,
-		stderr: stderr,
+		stdin:  bufio.NewWriter(stdin),
+		stdout: bufio.NewReader(stdout),
+		stderr: bufio.NewReader(stderr),
 		run:    false,
 	}, cmd.Err
 }
@@ -81,7 +80,16 @@ func (a *Actor) ReadLine() (string, error) {
 	if !a.Started() {
 		return "", ErrNotStarted
 	}
+	return a.stdout.ReadString('\n')
+}
 
-	reader := bufio.NewReader(a.stdout)
-	return reader.ReadString('\n')
+func (a *Actor) Send(msg string) error {
+	if !a.Started() {
+		return ErrNotStarted
+	}
+	_, err := a.stdin.WriteString(msg)
+	if err != nil {
+		return err
+	}
+	return a.stdin.Flush()
 }
