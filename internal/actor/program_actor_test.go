@@ -16,12 +16,12 @@ const (
 )
 
 func TestInvalidActor_FromProgram(t *testing.T) {
-	_, err := actor.FromProgram("invalid")
+	_, err := actor.NewProgramActor("invalid")
 	require.Error(t, err)
 }
 
 func TestEmptyActor_Start(t *testing.T) {
-	a, err := actor.FromProgram(emptyPythonScriptPath)
+	a, err := actor.NewProgramActor(emptyPythonScriptPath)
 	require.NoError(t, err)
 	require.NoError(t, a.Start())
 	// Скрипт пустой и он должен скоро окончить работу.
@@ -31,7 +31,7 @@ func TestEmptyActor_Start(t *testing.T) {
 }
 
 func TestEchoActor_Start(t *testing.T) {
-	a, err := actor.FromProgram(echoPythonScriptPath)
+	a, err := actor.NewProgramActor(echoPythonScriptPath)
 	require.NoError(t, err)
 	require.NoError(t, a.Start())
 	require.True(t, a.Started())
@@ -42,24 +42,24 @@ func TestEchoActor_Start(t *testing.T) {
 }
 
 func TestEchoActor_StartTwice(t *testing.T) {
-	a, err := actor.FromProgram(echoPythonScriptPath)
+	a, err := actor.NewProgramActor(echoPythonScriptPath)
 	require.NoError(t, err)
 	require.NoError(t, a.Start())
 	require.ErrorIs(t, a.Start(), actor.ErrAlreadyStarted)
 }
 
 func TestEchoActor_TerminateTwice(t *testing.T) {
-	a := actor.MustFromProgram(echoPythonScriptPath)
+	a := actor.MustNewProgramActor(echoPythonScriptPath)
 	require.NoError(t, a.Start())
 	require.NoError(t, a.Terminate())
 	require.NoError(t, a.Terminate())
 }
 
 func TestHelloActor_ReadLine(t *testing.T) {
-	a := actor.MustFromProgram(helloPythonScriptPath)
+	a := actor.MustNewProgramActor(helloPythonScriptPath)
 	require.NoError(t, a.Start())
 
-	line, err := a.ReadLine()
+	line, err := a.Receive()
 	require.NoError(t, err)
 	require.Equal(t, "Hello!\n", line)
 
@@ -69,13 +69,13 @@ func TestHelloActor_ReadLine(t *testing.T) {
 }
 
 func TestEchoActor_Send(t *testing.T) {
-	a := actor.MustFromProgram(echoPythonScriptPath)
+	a := actor.MustNewProgramActor(echoPythonScriptPath)
 	require.NoError(t, a.Start())
 
 	sent := "Hello!\n"
 	require.NoError(t, a.Send(sent))
 	// Так как программа выполняет функцию эхо, ответ должен быть такой же.
-	res, err := a.ReadLine()
+	res, err := a.Receive()
 	require.NoError(t, err)
 	require.Equal(t, sent, res)
 
