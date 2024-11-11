@@ -3,9 +3,6 @@ package game
 import (
 	"errors"
 	"fmt"
-	"log"
-
-	"github.com/zhikh23/bcg-game-theory/internal/actor"
 )
 
 type PrisonerDilemma struct {
@@ -13,11 +10,8 @@ type PrisonerDilemma struct {
 	b *Participant
 }
 
-func NewPrisonerDilemma(a, b actor.Actor) *PrisonerDilemma {
-	return &PrisonerDilemma{
-		a: NewParticipant(a),
-		b: NewParticipant(b),
-	}
+func NewPrisonerDilemma(a, b *Participant) *PrisonerDilemma {
+	return &PrisonerDilemma{a: a, b: b}
 }
 
 func (d *PrisonerDilemma) Start() error {
@@ -27,7 +21,7 @@ func (d *PrisonerDilemma) Start() error {
 	return err
 }
 
-func (d *PrisonerDilemma) Round() error {
+func (d *PrisonerDilemma) Play() error {
 	stepA, err := d.a.Receive()
 	if err != nil {
 		return err
@@ -50,13 +44,8 @@ func (d *PrisonerDilemma) Round() error {
 		d.a.Award(1)
 		d.b.Award(1)
 	default:
-		log.Fatalf("Invalid input: A = %s, B = %s", stepA, stepB)
+		return fmt.Errorf("invalid input: %s = %s, %s = %s", d.a.Name(), stepA, d.b.Name(), stepB)
 	}
-	fmt.Printf(
-		"A: %d\n"+
-			"B: %d\n",
-		d.a.Score(), d.b.Score(),
-	)
 
 	err = d.b.Send(stepA)
 	if err != nil {
@@ -68,4 +57,11 @@ func (d *PrisonerDilemma) Round() error {
 	}
 
 	return nil
+}
+
+func (d *PrisonerDilemma) Results() map[Name]Score {
+	return map[Name]Score{
+		d.a.Name(): d.a.Score(),
+		d.b.Name(): d.b.Score(),
+	}
 }
