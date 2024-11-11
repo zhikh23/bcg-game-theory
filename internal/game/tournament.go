@@ -31,12 +31,12 @@ func (t *Tournament) AddParticipant(prt *Participant) error {
 
 func (t *Tournament) Tour(rounds int) error {
 	var errs error
-	names := t.participantsNames()
-	for i, aName := range names[:len(names)-1] {
-		for _, bName := range names[i+1:] {
-			a := t.prts[aName]
-			b := t.prts[bName]
-			err := t.game.Play(rounds, a, b)
+	for nameA, prtA := range t.prts {
+		for nameB, prtB := range t.prts {
+			if nameA == nameB {
+				continue
+			}
+			err := t.game.Play(rounds, prtA, prtB)
 			if err != nil {
 				errs = errors.Join(errs, err)
 				break
@@ -44,12 +44,4 @@ func (t *Tournament) Tour(rounds int) error {
 		}
 	}
 	return errs
-}
-
-func (t *Tournament) participantsNames() []Name {
-	names := make([]Name, 0, len(t.prts))
-	for name := range t.prts {
-		names = append(names, name)
-	}
-	return names
 }

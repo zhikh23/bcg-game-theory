@@ -11,21 +11,19 @@ import (
 func main() {
 	var prts []*game.Participant
 
-	kindFactory := actor.NewProgramFactory("./tests/kind.py")
-	prts = append(prts, game.NewParticipant("Kind 1", kindFactory))
+	factoryKind := actor.NewProgramFactory("./tests/ultimatum/random_kind.py")
+	prts = append(prts, game.NewParticipant("Kind 1", factoryKind))
+	prts = append(prts, game.NewParticipant("Kind 2", factoryKind))
+	prts = append(prts, game.NewParticipant("Kind 3", factoryKind))
+	prts = append(prts, game.NewParticipant("Kind 4", factoryKind))
+	factoryEvil := actor.NewProgramFactory("./tests/ultimatum/random_evil.py")
+	prts = append(prts, game.NewParticipant("Evil 1", factoryEvil))
+	prts = append(prts, game.NewParticipant("Evil 2", factoryEvil))
+	prts = append(prts, game.NewParticipant("Evil 3", factoryEvil))
+	prts = append(prts, game.NewParticipant("Evil 4", factoryEvil))
 
-	titForTatFactory := actor.NewProgramFactory("./tests/tit_for_tat.py")
-	prts = append(prts, game.NewParticipant("Tit for tat 1", titForTatFactory))
-
-	evilFactory := actor.NewProgramFactory("./tests/evil.py")
-	prts = append(prts, game.NewParticipant("Evil 1", evilFactory))
-	prts = append(prts, game.NewParticipant("Evil 2", evilFactory))
-	prts = append(prts, game.NewParticipant("Evil 3", evilFactory))
-
-	g := game.NewPrisonerDilemma(game.PrisonerDilemmaConfig{
-		Cooperate:     5,
-		Defect:        10,
-		MutualDefects: 1,
+	g := game.NewUltimatumGame(game.UltimatumConfig{
+		Sum: 10,
 	})
 	t := game.NewTournament(g)
 	for _, prt := range prts {
