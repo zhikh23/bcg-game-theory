@@ -1,14 +1,11 @@
 package actor
 
-import (
-	"errors"
-)
+import "errors"
 
-var ErrNotRunning = errors.New("actor is not started")
-var ErrAlreadyStarted = errors.New("actor already started")
+var ErrActorAlreadyTerminated = errors.New("actor already terminated")
+var ErrActorIsNotRunning = errors.New("actor is not running")
 
 type Actor interface {
-	Start() error
 	Running() bool
 	Terminate() error
 	Receive() (string, error)

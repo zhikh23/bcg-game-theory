@@ -9,7 +9,16 @@ import (
 	"github.com/zhikh23/bcg-game-theory/internal/actor"
 )
 
-func noOp(_ <-chan string, _ chan<- string) {
+const defaultStdCap = 10
+
+func noOp(stdin <-chan string, _ chan<- string) {
+	for {
+		select {
+		case <-stdin:
+		default:
+			time.Sleep(time.Microsecond)
+		}
+	}
 }
 
 func echo(stdin <-chan string, stdout chan<- string) {
@@ -23,27 +32,24 @@ func echo(stdin <-chan string, stdout chan<- string) {
 	}
 }
 
-func TestInternalActor_Start(t *testing.T) {
-	a := actor.NewInternalActor(noOp)
-	require.False(t, a.Running())
-	require.NoError(t, a.Start())
+func TestInternalActor_Create(t *testing.T) {
+	f := actor.NewInternalFactory(noOp, defaultStdCap, defaultStdCap)
+	a := f.MustNew()
 	require.True(t, a.Running())
 }
 
 func TestInternalActor_Terminate(t *testing.T) {
-	a := actor.NewInternalActor(noOp)
-	require.NoError(t, a.Start())
+	f := actor.NewInternalFactory(noOp, defaultStdCap, defaultStdCap)
+	a := f.MustNew()
 	require.NoError(t, a.Terminate())
 	require.False(t, a.Running())
 }
 
 func TestInternalActor_SendAndReceive(t *testing.T) {
-	a := actor.NewInternalActor(echo)
+	f := actor.NewInternalFactory(echo, defaultStdCap, defaultStdCap)
+	a := f.MustNew()
 
 	sent := "Hello!"
-	require.ErrorIs(t, a.Send(sent), actor.ErrNotRunning)
-
-	require.NoError(t, a.Start())
 	require.NoError(t, a.Send(sent))
 
 	res, err := a.Receive()
@@ -52,8 +58,8 @@ func TestInternalActor_SendAndReceive(t *testing.T) {
 }
 
 func TestInternalActor_SendAndReceiveTwice(t *testing.T) {
-	a := actor.NewInternalActor(echo)
-	require.NoError(t, a.Start())
+	f := actor.NewInternalFactory(echo, defaultStdCap, defaultStdCap)
+	a := f.MustNew()
 
 	sent := "Hello!"
 	require.NoError(t, a.Send(sent))
@@ -65,4 +71,28 @@ func TestInternalActor_SendAndReceiveTwice(t *testing.T) {
 	res, err = a.Receive()
 	require.NoError(t, err)
 	require.Equal(t, sent, res)
+}
+
+func TestInternalActor_SendAfterTerminate(t *testing.T) {
+	f := actor.NewInternalFactory(noOp, defaultStdCap, defaultStdCap)
+	a := f.MustNew()
+
+	require.NoError(t, a.Terminate())
+	require.ErrorIs(t, a.Send("sth"), actor.ErrActorIsNotRunning)
+}
+
+func TestInternalActor_ReceiveAfterTerminate(t *testing.T) {
+	f := actor.NewInternalFactory(noOp, defaultStdCap, defaultStdCap)
+	a := f.MustNew()
+
+	require.NoError(t, a.Terminate())
+	_, err := a.Receive()
+	require.ErrorIs(t, err, actor.ErrActorIsNotRunning)
+}
+
+func TestIntervalActor_TerminateTwice(t *testing.T) {
+	f := actor.NewInternalFactory(noOp, defaultStdCap, defaultStdCap)
+	a := f.MustNew()
+	require.NoError(t, a.Terminate())
+	require.ErrorIs(t, a.Terminate(), actor.ErrActorAlreadyTerminated)
 }

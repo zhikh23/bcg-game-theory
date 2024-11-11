@@ -2,52 +2,71 @@ package actor
 
 type Handler func(stdin <-chan string, stdout chan<- string)
 
-type InternalActor struct {
+type InternalFactory struct {
+	handler   Handler
+	stdinCap  int
+	stdoutCap int
+}
+
+type Internal struct {
 	handler Handler
 	stdin   chan string
 	stdout  chan string
-	run     bool
+	running bool
 }
 
-func NewInternalActor(handler Handler) *InternalActor {
-	return &InternalActor{
-		handler: handler,
-		stdin:   make(chan string, 10),
-		stdout:  make(chan string, 10),
+func NewInternalFactory(handler Handler, stdinCap int, stdoutCap int) *InternalFactory {
+	return &InternalFactory{
+		handler:   handler,
+		stdinCap:  stdinCap,
+		stdoutCap: stdoutCap,
 	}
 }
 
-func (a *InternalActor) Start() error {
-	if a.run {
-		return ErrAlreadyStarted
+func (f *InternalFactory) New() (Actor, error) {
+	stdin := make(chan string, f.stdinCap)
+	stdout := make(chan string, f.stdoutCap)
+
+	go f.handler(stdin, stdout)
+
+	return &Internal{
+		handler: f.handler,
+		stdin:   stdin,
+		stdout:  stdout,
+		running: true,
+	}, nil
+}
+
+func (f *InternalFactory) MustNew() Actor {
+	a, err := f.New()
+	if err != nil {
+		panic(err)
 	}
-	a.run = true
-	go func() {
-		a.handler(a.stdin, a.stdout)
-		a.run = false
-	}()
+	return a
+}
+
+func (a *Internal) Running() bool {
+	return a.running
+}
+
+func (a *Internal) Terminate() error {
+	if !a.running {
+		return ErrActorAlreadyTerminated
+	}
+	a.running = false
 	return nil
 }
 
-func (a *InternalActor) Running() bool {
-	return a.run
-}
-
-func (a *InternalActor) Terminate() error {
-	a.run = false
-	return nil
-}
-
-func (a *InternalActor) Receive() (string, error) {
-	if !a.run {
-		return "", ErrNotRunning
+func (a *Internal) Receive() (string, error) {
+	if !a.running {
+		return "", ErrActorIsNotRunning
 	}
 	return <-a.stdout, nil
 }
 
-func (a *InternalActor) Send(msg string) error {
-	if !a.run {
-		return ErrNotRunning
+func (a *Internal) Send(msg string) error {
+	if !a.running {
+		return ErrActorIsNotRunning
 	}
 	a.stdin <- msg
 	return nil

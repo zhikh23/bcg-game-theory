@@ -6,17 +6,21 @@ type Name string
 type Score int
 
 type Participant struct {
-	actor.Actor
-	name  Name
-	score Score
+	factory actor.Factory
+	name    Name
+	score   Score
 }
 
-func NewParticipant(a actor.Actor, name string) *Participant {
+func NewParticipant(name string, factory actor.Factory) *Participant {
 	return &Participant{
-		Actor: a,
-		name:  Name(name),
-		score: 0,
+		factory: factory,
+		name:    Name(name),
+		score:   0,
 	}
+}
+
+func (p *Participant) Actor() (actor.Actor, error) {
+	return p.factory.New()
 }
 
 func (p *Participant) Name() Name {

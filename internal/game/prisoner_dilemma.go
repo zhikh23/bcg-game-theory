@@ -1,67 +1,81 @@
 package game
 
 import (
-	"errors"
 	"fmt"
+	"github.com/zhikh23/bcg-game-theory/internal/actor"
 )
 
+type PrisonerDilemmaConfig struct {
+	MutualDefects Score
+	Defect        Score
+	Cooperate     Score
+}
+
 type PrisonerDilemma struct {
-	a *Participant
-	b *Participant
+	cfg PrisonerDilemmaConfig
 }
 
-func NewPrisonerDilemma(a, b *Participant) *PrisonerDilemma {
-	return &PrisonerDilemma{a: a, b: b}
+func NewPrisonerDilemma(cfg PrisonerDilemmaConfig) *PrisonerDilemma {
+	return &PrisonerDilemma{
+		cfg: cfg,
+	}
 }
 
-func (d *PrisonerDilemma) Start() error {
-	var err error
-	err = errors.Join(err, d.a.Start())
-	err = errors.Join(err, d.b.Start())
-	return err
-}
-
-func (d *PrisonerDilemma) Play() error {
-	stepA, err := d.a.Receive()
+func (d *PrisonerDilemma) Play(rounds int, a, b *Participant) error {
+	actorA, err := a.Actor()
 	if err != nil {
 		return err
 	}
 
-	stepB, err := d.b.Receive()
+	actorB, err := b.Actor()
+	if err != nil {
+		return err
+	}
+
+	for range rounds {
+		err = d.round(actorA, actorB, a, b)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (d *PrisonerDilemma) round(a, b actor.Actor, pa, pb *Participant) error {
+	stepA, err := a.Receive()
+	if err != nil {
+		return err
+	}
+
+	stepB, err := b.Receive()
 	if err != nil {
 		return err
 	}
 
 	switch {
 	case stepA == "Y" && stepB == "Y":
-		d.a.Award(5)
-		d.b.Award(5)
+		pa.Award(d.cfg.Cooperate)
+		pb.Award(d.cfg.Cooperate)
 	case stepA == "Y" && stepB == "N":
-		d.b.Award(10)
+		pb.Award(d.cfg.Defect)
 	case stepA == "N" && stepB == "Y":
-		d.a.Award(10)
+		pa.Award(d.cfg.Defect)
 	case stepA == "N" && stepB == "N":
-		d.a.Award(1)
-		d.b.Award(1)
+		pa.Award(d.cfg.MutualDefects)
+		pb.Award(d.cfg.MutualDefects)
 	default:
-		return fmt.Errorf("invalid input: %s = %s, %s = %s", d.a.Name(), stepA, d.b.Name(), stepB)
+		return fmt.Errorf("invalid input: %s = %s, %s = %s", pa.Name(), stepA, pb.Name(), stepB)
 	}
 
-	err = d.b.Send(stepA)
+	err = b.Send(stepA)
 	if err != nil {
 		return err
 	}
-	err = d.a.Send(stepB)
+	err = a.Send(stepB)
 	if err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func (d *PrisonerDilemma) Results() map[Name]Score {
-	return map[Name]Score{
-		d.a.Name(): d.a.Score(),
-		d.b.Name(): d.b.Score(),
-	}
 }

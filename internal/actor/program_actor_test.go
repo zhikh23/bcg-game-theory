@@ -16,14 +16,15 @@ const (
 )
 
 func TestInvalidActor_FromProgram(t *testing.T) {
-	_, err := actor.NewProgramActor("invalid")
+	f := actor.NewProgramFactory("invalid")
+	_, err := f.New()
 	require.Error(t, err)
 }
 
 func TestEmptyActor_Start(t *testing.T) {
-	a, err := actor.NewProgramActor(emptyPythonScriptPath)
+	f := actor.NewProgramFactory(emptyPythonScriptPath)
+	a, err := f.New()
 	require.NoError(t, err)
-	require.NoError(t, a.Start())
 	// Скрипт пустой и он должен скоро окончить работу.
 	require.Eventually(t, func() bool {
 		return a.Running() == false
@@ -31,9 +32,9 @@ func TestEmptyActor_Start(t *testing.T) {
 }
 
 func TestEchoActor_Start(t *testing.T) {
-	a, err := actor.NewProgramActor(echoPythonScriptPath)
+	f := actor.NewProgramFactory(echoPythonScriptPath)
+	a, err := f.New()
 	require.NoError(t, err)
-	require.NoError(t, a.Start())
 	require.True(t, a.Running())
 	require.NoError(t, a.Terminate())
 	require.Eventually(t, func() bool {
@@ -41,27 +42,21 @@ func TestEchoActor_Start(t *testing.T) {
 	}, 100*time.Millisecond, 10*time.Millisecond)
 }
 
-func TestEchoActor_StartTwice(t *testing.T) {
-	a, err := actor.NewProgramActor(echoPythonScriptPath)
-	require.NoError(t, err)
-	require.NoError(t, a.Start())
-	require.ErrorIs(t, a.Start(), actor.ErrAlreadyStarted)
-}
-
 func TestEchoActor_TerminateTwice(t *testing.T) {
-	a := actor.MustNewProgramActor(echoPythonScriptPath)
-	require.NoError(t, a.Start())
+	f := actor.NewProgramFactory(echoPythonScriptPath)
+	a, err := f.New()
+	require.NoError(t, err)
 	require.NoError(t, a.Terminate())
-	require.NoError(t, a.Terminate())
+	require.ErrorIs(t, a.Terminate(), actor.ErrActorAlreadyTerminated)
 }
 
 func TestHelloActor_ReadLine(t *testing.T) {
-	a := actor.MustNewProgramActor(helloPythonScriptPath)
-	require.NoError(t, a.Start())
+	f := actor.NewProgramFactory(helloPythonScriptPath)
+	a := f.MustNew()
 
 	line, err := a.Receive()
 	require.NoError(t, err)
-	require.Equal(t, "Hello!\n", line)
+	require.Equal(t, "Hello!", line)
 
 	require.Eventually(t, func() bool {
 		return a.Running() == false
@@ -69,10 +64,10 @@ func TestHelloActor_ReadLine(t *testing.T) {
 }
 
 func TestEchoActor_Send(t *testing.T) {
-	a := actor.MustNewProgramActor(echoPythonScriptPath)
-	require.NoError(t, a.Start())
+	f := actor.NewProgramFactory(echoPythonScriptPath)
+	a := f.MustNew()
 
-	sent := "Hello!\n"
+	sent := "Hello!"
 	require.NoError(t, a.Send(sent))
 	// Так как программа выполняет функцию эхо, ответ должен быть такой же.
 	res, err := a.Receive()

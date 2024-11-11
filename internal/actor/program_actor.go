@@ -6,6 +6,10 @@ import (
 	"strings"
 )
 
+type ProgramFactory struct {
+	path string
+}
+
 type Program struct {
 	cmd    *exec.Cmd
 	stdin  *bufio.Writer
@@ -14,8 +18,17 @@ type Program struct {
 	run    bool
 }
 
-func NewProgramActor(path string) (*Program, error) {
-	cmd := exec.Command(path)
+func NewProgramFactory(path string) *ProgramFactory {
+	return &ProgramFactory{
+		path: path,
+	}
+}
+
+func (f *ProgramFactory) New() (Actor, error) {
+	cmd := exec.Command(f.path)
+	if cmd.Err != nil {
+		return nil, cmd.Err
+	}
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -32,37 +45,34 @@ func NewProgramActor(path string) (*Program, error) {
 		return nil, err
 	}
 
-	return &Program{
+	p := &Program{
 		cmd:    cmd,
 		stdin:  bufio.NewWriter(stdin),
 		stdout: bufio.NewReader(stdout),
 		stderr: bufio.NewReader(stderr),
-		run:    false,
-	}, cmd.Err
+		run:    true,
+	}
+
+	err = cmd.Start()
+	if err == nil {
+		go func() {
+			_ = cmd.Wait()
+			p.run = false
+		}()
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return p, nil
 }
 
-func MustNewProgramActor(path string) *Program {
-	a, err := NewProgramActor(path)
+func (f *ProgramFactory) MustNew() Actor {
+	a, err := f.New()
 	if err != nil {
 		panic(err)
 	}
 	return a
-}
-
-func (a *Program) Start() error {
-	if a.run {
-		return ErrAlreadyStarted
-	}
-
-	a.run = true
-	err := a.cmd.Start()
-	if err == nil {
-		go func() {
-			_ = a.cmd.Wait()
-			a.run = false
-		}()
-	}
-	return err
 }
 
 func (a *Program) Running() bool {
@@ -70,12 +80,22 @@ func (a *Program) Running() bool {
 }
 
 func (a *Program) Terminate() error {
-	return a.cmd.Process.Kill()
+	if !a.Running() {
+		return ErrActorAlreadyTerminated
+	}
+
+	err := a.cmd.Process.Kill()
+	if err != nil {
+		return err
+	}
+	_ = a.cmd.Wait()
+
+	return nil
 }
 
 func (a *Program) Receive() (string, error) {
 	if !a.Running() {
-		return "", ErrNotRunning
+		return "", ErrActorIsNotRunning
 	}
 
 	s, err := a.stdout.ReadString('\n')
@@ -89,7 +109,7 @@ func (a *Program) Receive() (string, error) {
 
 func (a *Program) Send(msg string) error {
 	if !a.Running() {
-		return ErrNotRunning
+		return ErrActorIsNotRunning
 	}
 
 	_, err := a.stdin.WriteString(msg + "\n")

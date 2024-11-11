@@ -4,4 +4,4 @@ print("Y")
 
 while True:
     another = input()
-    print(another)
+    print("Y")
