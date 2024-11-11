@@ -3,6 +3,7 @@ package actor
 import (
 	"bufio"
 	"os/exec"
+	"strings"
 )
 
 type Program struct {
@@ -76,16 +77,25 @@ func (a *Program) Receive() (string, error) {
 	if !a.Running() {
 		return "", ErrNotRunning
 	}
-	return a.stdout.ReadString('\n')
+
+	s, err := a.stdout.ReadString('\n')
+	if err != nil {
+		return "", err
+	}
+
+	s = strings.TrimSuffix(s, "\n")
+	return s, nil
 }
 
 func (a *Program) Send(msg string) error {
 	if !a.Running() {
 		return ErrNotRunning
 	}
-	_, err := a.stdin.WriteString(msg)
+
+	_, err := a.stdin.WriteString(msg + "\n")
 	if err != nil {
 		return err
 	}
+
 	return a.stdin.Flush()
 }
