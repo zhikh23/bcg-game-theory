@@ -11,18 +11,14 @@ import (
 func main() {
 	var prts []*game.Participant
 
-	factoryKind := actor.NewProgramFactory("./tests/ultimatum/random_kind.py")
-	prts = append(prts, game.NewParticipant("Kind 1", factoryKind))
-	prts = append(prts, game.NewParticipant("Kind 2", factoryKind))
-	prts = append(prts, game.NewParticipant("Kind 3", factoryKind))
-	prts = append(prts, game.NewParticipant("Kind 4", factoryKind))
-	factoryEvil := actor.NewProgramFactory("./tests/ultimatum/random_evil.py")
+	factoryTrustful := actor.NewProgramFactory("./tests/trust/trustful.py")
+	prts = append(prts, game.NewParticipant("Trustful 1", factoryTrustful))
+	prts = append(prts, game.NewParticipant("Trustful 2", factoryTrustful))
+	prts = append(prts, game.NewParticipant("Trustful 3", factoryTrustful))
+	factoryEvil := actor.NewProgramFactory("./tests/trust/evil.py")
 	prts = append(prts, game.NewParticipant("Evil 1", factoryEvil))
-	prts = append(prts, game.NewParticipant("Evil 2", factoryEvil))
-	prts = append(prts, game.NewParticipant("Evil 3", factoryEvil))
-	prts = append(prts, game.NewParticipant("Evil 4", factoryEvil))
 
-	g := game.NewUltimatumGame(game.UltimatumConfig{
+	g := game.NewTrust(game.TrustConfig{
 		Sum: 10,
 	})
 	t := game.NewTournament(g)
