@@ -3,24 +3,53 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
+	"path"
+	"strings"
 
 	"github.com/zhikh23/bcg-game-theory/internal/actor"
 	"github.com/zhikh23/bcg-game-theory/internal/game"
 )
 
-func main() {
-	var prts []*game.Participant
+type GameName string
 
-	factoryTrustful := actor.NewProgramFactory("./tests/trust/trustful.py")
-	prts = append(prts, game.NewParticipant("Trustful 1", factoryTrustful))
-	prts = append(prts, game.NewParticipant("Trustful 2", factoryTrustful))
-	prts = append(prts, game.NewParticipant("Trustful 3", factoryTrustful))
-	factoryEvil := actor.NewProgramFactory("./tests/trust/evil.py")
-	prts = append(prts, game.NewParticipant("Evil 1", factoryEvil))
+const (
+	Dilemma   GameName = "dilemma"
+	Ultimatum GameName = "ultimatum"
+	Trust     GameName = "trust"
+)
 
-	g := game.NewTrust(game.TrustConfig{
+var games map[GameName]game.BinaryGame
+
+func init() {
+	games = make(map[GameName]game.BinaryGame)
+	games[Dilemma] = game.NewPrisonerDilemma(game.PrisonerDilemmaConfig{
+		MutualDefects: 1,
+		Defect:        8,
+		Cooperate:     5,
+	})
+	games[Ultimatum] = game.NewUltimatumGame(game.UltimatumConfig{
 		Sum: 10,
 	})
+	games[Trust] = game.NewTrust(game.TrustConfig{
+		Sum: 10,
+	})
+}
+
+func main() {
+	gameName := os.Args[1]
+	g, ok := games[GameName(gameName)]
+	if !ok {
+		log.Fatal("game not found: ", gameName)
+	}
+
+	prts := make([]*game.Participant, 0, len(os.Args)-2)
+	for _, programPath := range os.Args[2:] {
+		program := strings.TrimSuffix(path.Base(programPath), path.Ext(programPath))
+		factory := actor.NewProgramFactory(programPath)
+		prts = append(prts, game.NewParticipant(program, factory))
+	}
+
 	t := game.NewTournament(g)
 	for _, prt := range prts {
 		err := t.AddParticipant(prt)
@@ -34,7 +63,8 @@ func main() {
 		log.Fatal(err)
 	}
 
+	fmt.Printf("Program,Score\n")
 	for _, prt := range prts {
-		fmt.Printf("%s: %d\n", prt.Name(), prt.Score())
+		fmt.Printf("%s,%d\n", prt.Name(), prt.Score())
 	}
 }
